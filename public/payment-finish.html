@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pembayaran Berhasil!</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .card {
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      padding: 40px; width: 100%; max-width: 460px; text-align: center;
+    }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { color: #166534; font-size: 24px; margin-bottom: 8px; }
+    p { color: #555; font-size: 14px; margin-bottom: 8px; }
+    .order-id {
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+      padding: 12px; margin: 16px 0; font-family: monospace; font-size: 13px; color: #166534;
+    }
+    .details {
+      text-align: left; background: #f8fafc; border-radius: 8px;
+      padding: 16px; margin: 16px 0; font-size: 13px;
+    }
+    .details .row {
+      display: flex; justify-content: space-between; padding: 6px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .details .row:last-child { border-bottom: none; }
+    .details .label { color: #888; }
+    .details .value { color: #333; font-weight: 600; }
+    .btn {
+      display: inline-block; margin-top: 20px; padding: 14px 32px;
+      background: #00aa13; color: #fff; border-radius: 8px;
+      text-decoration: none; font-weight: 600; font-size: 14px;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #008c10; transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✅</div>
+    <h1>Pembayaran Berhasil!</h1>
+    <p>Terima kasih, pembayaran GoPay kamu sudah diterima.</p>
+
+    <div class="order-id" id="orderId">Loading...</div>
+
+    <div class="details" id="details">
+      <div class="row">
+        <span class="label">Status</span>
+        <span class="value" style="color:#16a34a;">SUKSES</span>
+      </div>
+      <div class="row">
+        <span class="label">Metode</span>
+        <span class="value">GoPay</span>
+      </div>
+      <div class="row">
+        <span class="label">Waktu</span>
+        <span class="value" id="txTime">-</span>
+      </div>
+    </div>
+
+    <a class="btn" href="/gopay">Buat Pembayaran Lagi</a>
+    <br />
+    <a href="/" style="display:inline-block; margin-top:12px; color:#667; font-size:13px;">
+      ← Kembali ke Halaman Utama
+    </a>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const orderId = params.get('order_id') || params.get('orderId') || '-';
+    document.getElementById('orderId').textContent = `Order ID: ${orderId}`;
+    document.getElementById('txTime').textContent = new Date().toLocaleString('id-ID');
+
+    // Optional: fetch actual status
+    if (orderId && orderId !== '-') {
+      fetch(`/api/status/${orderId}`)
+        .then(r => r.json())
+        .then(data => {
+          console.log('Status:', data);
+        })
+        .catch(() => {});
+    }
+  </script>
+</body>
+</html>
