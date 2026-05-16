@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Midtrans Snap - Demo Checkout</title>
+
+  <!-- Snap.js akan di-load secara dinamis setelah dapat client key dari /api/config -->
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+    .subtitle {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .badge.sandbox { background: #fef3c7; color: #92400e; }
+    .badge.production { background: #dcfce7; color: #166534; }
+
+    .form-group { margin-bottom: 16px; }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #667eea;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    button:hover:not(:disabled) {
+      background: #5a67d8;
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    .status.show { display: block; }
+    .status.success { background: #dcfce7; color: #166534; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+    .status.info { background: #dbeafe; color: #1e40af; }
+
+    .test-card {
+      background: #f8fafc;
+      border-left: 3px solid #667eea;
+      padding: 12px;
+      margin-top: 20px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .test-card strong { color: #333; }
+    .test-card code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span id="modeBadge" class="badge sandbox">SANDBOX</span>
+    <h1>💳 Midtrans Snap Demo</h1>
+    <p class="subtitle">Test checkout dengan Snap popup</p>
+
+    <form id="checkoutForm">
+      <div class="form-group">
+        <label for="name">Nama</label>
+        <input type="text" id="name" value="Budi Santoso" required />
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" value="budi@example.com" required />
+      </div>
+
+      <div class="form-group">
+        <label for="phone">No. HP</label>
+        <input type="tel" id="phone" value="08111222333" required />
+      </div>
+
+      <div class="form-group">
+        <label for="amount">Jumlah (Rp)</label>
+        <input type="number" id="amount" value="50000" min="1000" required />
+      </div>
+
+      <button type="submit" id="payBtn">Bayar Sekarang</button>
+    </form>
+
+    <div id="status" class="status"></div>
+
+    <div class="test-card">
+      <strong>💡 Test Card (Sandbox):</strong><br />
+      Card: <code>4811 1111 1111 1114</code><br />
+      CVV: <code>123</code> · Exp: <code>01/25</code> · OTP: <code>112233</code>
+    </div>
+  </div>
+
+  <script>
+    let config = null;
+
+    // Load config & Snap.js
+    async function init() {
+      const res = await fetch('/api/config');
+      config = await res.json();
+
+      // Update badge
+      const badge = document.getElementById('modeBadge');
+      if (config.isProduction) {
+        badge.textContent = 'PRODUCTION';
+        badge.className = 'badge production';
+      }
+
+      // Inject Snap.js dengan client key
+      const script = document.createElement('script');
+      script.src = config.isProduction
+        ? 'https://app.midtrans.com/snap/snap.js'
+        : 'https://app.sandbox.midtrans.com/snap/snap.js';
+      script.setAttribute('data-client-key', config.clientKey);
+      document.head.appendChild(script);
+    }
+
+    function showStatus(message, type = 'info') {
+      const el = document.getElementById('status');
+      el.className = `status show ${type}`;
+      el.textContent = message;
+    }
+
+    document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('payBtn');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      showStatus('Membuat transaksi...', 'info');
+
+      try {
+        const payload = {
+          amount: Number(document.getElementById('amount').value),
+          customer: {
+            first_name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+          },
+          items: [
+            {
+              id: 'ITEM-DEMO',
+              price: Number(document.getElementById('amount').value),
+              quantity: 1,
+              name: 'Demo Product',
+            },
+          ],
+        };
+
+        const res = await fetch('/api/create-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Gagal membuat transaksi');
+
+        showStatus(`Order ID: ${data.orderId}`, 'info');
+
+        // Trigger Snap popup
+        window.snap.pay(data.token, {
+          onSuccess: (result) => {
+            console.log('SUCCESS:', result);
+            showStatus(`✅ Pembayaran berhasil! Order: ${data.orderId}`, 'success');
+            pollStatus(data.orderId);
+          },
+          onPending: (result) => {
+            console.log('PENDING:', result);
+            showStatus(`⏳ Menunggu pembayaran. Order: ${data.orderId}`, 'info');
+            pollStatus(data.orderId);
+          },
+          onError: (result) => {
+            console.error('ERROR:', result);
+            showStatus(`❌ Pembayaran gagal: ${result.status_message || 'unknown'}`, 'error');
+          },
+          onClose: () => {
+            showStatus('Popup ditutup tanpa menyelesaikan pembayaran.', 'info');
+          },
+        });
+      } catch (err) {
+        showStatus(`❌ ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Bayar Sekarang';
+      }
+    });
+
+    // Polling status setiap 5 detik (max 12x = 1 menit)
+    async function pollStatus(orderId, attempt = 0) {
+      if (attempt > 12) return;
+      try {
+        const res = await fetch(`/api/status/${orderId}`);
+        const data = await res.json();
+        console.log(`[poll #${attempt}]`, data);
+        if (data.status === 'paid' || data.status === 'settlement' || data.status === 'capture') {
+          showStatus(`✅ Status final: PAID (${orderId})`, 'success');
+          return;
+        }
+        setTimeout(() => pollStatus(orderId, attempt + 1), 5000);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
