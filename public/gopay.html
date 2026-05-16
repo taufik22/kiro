@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bayar dengan GoPay</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #00aa13 0%, #007a0d 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 32px;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 { color: #333; margin-bottom: 8px; font-size: 24px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 24px; }
+    .gopay-logo {
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+    .form-group { margin-bottom: 16px; }
+    label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: #555; margin-bottom: 6px;
+    }
+    input {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 14px; transition: border 0.2s;
+    }
+    input:focus { outline: none; border-color: #00aa13; }
+    button {
+      width: 100%; padding: 14px;
+      background: #00aa13; color: #fff; border: none;
+      border-radius: 8px; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; margin-top: 8px;
+    }
+    button:hover:not(:disabled) { background: #008c10; transform: translateY(-1px); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .qr-section {
+      text-align: center; margin-top: 24px; padding: 20px;
+      border: 2px dashed #e2e8f0; border-radius: 12px;
+      display: none;
+    }
+    .qr-section.show { display: block; }
+    .qr-section img { max-width: 250px; border-radius: 8px; }
+    .qr-section h3 { margin: 12px 0 8px; color: #333; }
+    .qr-section p { font-size: 13px; color: #666; }
+
+    .deeplink-btn {
+      display: inline-block; margin-top: 12px; padding: 10px 20px;
+      background: #00aa13; color: #fff; border-radius: 8px;
+      text-decoration: none; font-weight: 600; font-size: 14px;
+    }
+    .deeplink-btn:hover { background: #008c10; }
+
+    .status {
+      margin-top: 16px; padding: 12px; border-radius: 8px;
+      font-size: 13px; display: none;
+    }
+    .status.show { display: block; }
+    .status.success { background: #dcfce7; color: #166534; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+    .status.info { background: #dbeafe; color: #1e40af; }
+
+    .timer { font-size: 18px; font-weight: bold; color: #00aa13; margin-top: 8px; }
+
+    .back-link {
+      display: block; text-align: center; margin-top: 20px;
+      color: #667; font-size: 13px;
+    }
+
+    .test-info {
+      background: #f0fdf4; border-left: 3px solid #00aa13;
+      padding: 12px; margin-top: 20px; font-size: 12px; border-radius: 6px;
+    }
+    .test-info strong { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="gopay-logo">📱</div>
+    <h1>Bayar dengan GoPay</h1>
+    <p class="subtitle">Scan QR code atau buka langsung di app GoPay</p>
+
+    <!-- Form -->
+    <form id="gopayForm">
+      <div class="form-group">
+        <label for="name">Nama</label>
+        <input type="text" id="name" value="Budi Santoso" required />
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" value="budi@example.com" required />
+      </div>
+      <div class="form-group">
+        <label for="phone">No. HP</label>
+        <input type="tel" id="phone" value="08111222333" required />
+      </div>
+      <div class="form-group">
+        <label for="amount">Jumlah (Rp)</label>
+        <input type="number" id="amount" value="25000" min="1000" required />
+      </div>
+      <button type="submit" id="payBtn">Generate QR Code GoPay</button>
+    </form>
+
+    <!-- QR Code Section -->
+    <div id="qrSection" class="qr-section">
+      <h3>Scan QR Code ini dengan app GoPay/Gojek:</h3>
+      <img id="qrImage" src="" alt="QR Code GoPay" />
+      <p>Atau buka langsung di HP:</p>
+      <a id="deeplinkBtn" class="deeplink-btn" href="#" target="_blank">Buka di App GoPay</a>
+      <div class="timer" id="timer"></div>
+      <p style="margin-top:8px; font-size:11px; color:#999;">Menunggu pembayaran...</p>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="test-info">
+      <strong>💡 Test di Sandbox:</strong><br />
+      Setelah QR muncul, buka simulator:<br />
+      <a href="https://simulator.sandbox.midtrans.com/gopay/ui/index" target="_blank">
+        simulator.sandbox.midtrans.com/gopay/ui/index
+      </a><br />
+      Klik <strong>"Pay"</strong> untuk simulasi pembayaran berhasil.
+    </div>
+
+    <a class="back-link" href="/">← Kembali ke Snap Checkout</a>
+  </div>
+
+  <script>
+    function showStatus(message, type = 'info') {
+      const el = document.getElementById('status');
+      el.className = `status show ${type}`;
+      el.textContent = message;
+    }
+
+    document.getElementById('gopayForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('payBtn');
+      btn.disabled = true;
+      btn.textContent = 'Memproses...';
+      showStatus('Menghubungi Midtrans...', 'info');
+
+      try {
+        const payload = {
+          amount: Number(document.getElementById('amount').value),
+          customer: {
+            first_name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+          },
+        };
+
+        const res = await fetch('/api/charge-gopay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Gagal membuat transaksi');
+
+        // Tampilkan QR Code
+        const qrSection = document.getElementById('qrSection');
+        qrSection.classList.add('show');
+
+        if (data.qrCodeUrl) {
+          document.getElementById('qrImage').src = data.qrCodeUrl;
+        }
+
+        if (data.deeplinkUrl) {
+          document.getElementById('deeplinkBtn').href = data.deeplinkUrl;
+        }
+
+        showStatus(`Order: ${data.orderId} | Status: ${data.status}`, 'info');
+
+        // Countdown timer (15 menit default)
+        startCountdown(15 * 60);
+
+        // Polling status
+        pollStatus(data.orderId);
+
+      } catch (err) {
+        showStatus(`❌ ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate QR Code GoPay';
+      }
+    });
+
+    function startCountdown(seconds) {
+      const timerEl = document.getElementById('timer');
+      const interval = setInterval(() => {
+        if (seconds <= 0) {
+          timerEl.textContent = 'QR Code expired!';
+          timerEl.style.color = '#dc2626';
+          clearInterval(interval);
+          return;
+        }
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        timerEl.textContent = `⏱ ${m}:${s.toString().padStart(2, '0')}`;
+        seconds--;
+      }, 1000);
+    }
+
+    async function pollStatus(orderId, attempt = 0) {
+      if (attempt > 60) return; // max 5 menit polling (setiap 5 detik)
+      try {
+        const res = await fetch(`/api/status/${orderId}`);
+        const data = await res.json();
+        console.log(`[poll #${attempt}]`, data);
+
+        const status = data.status || data.transactionStatus;
+        if (status === 'paid' || status === 'settlement') {
+          showStatus(`✅ Pembayaran GoPay BERHASIL! Order: ${orderId}`, 'success');
+          document.getElementById('qrSection').innerHTML = `
+            <h3 style="color:#16a34a;">✅ Pembayaran Diterima!</h3>
+            <p>Order ID: ${orderId}</p>
+          `;
+          return;
+        }
+        if (status === 'expire' || status === 'cancel' || status === 'deny' || status === 'failed') {
+          showStatus(`❌ Pembayaran gagal/expired. Order: ${orderId}`, 'error');
+          return;
+        }
+
+        setTimeout(() => pollStatus(orderId, attempt + 1), 5000);
+      } catch (e) {
+        console.error(e);
+        setTimeout(() => pollStatus(orderId, attempt + 1), 5000);
+      }
+    }
+  </script>
+</body>
+</html>

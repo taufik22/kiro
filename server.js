@@ -199,6 +199,86 @@ app.post('/api/notification', async (req, res) => {
 });
 
 // =========================================================================
+// POST /api/charge-gopay -> Langsung charge GoPay (tanpa popup Snap)
+// Body: { amount, customer: { first_name, email, phone } }
+// Response: QR code URL + deeplink untuk redirect ke app GoPay
+// =========================================================================
+app.post('/api/charge-gopay', async (req, res) => {
+  try {
+    const { amount, customer } = req.body;
+
+    if (!amount || amount < 1) {
+      return res.status(400).json({ error: 'amount wajib diisi & > 0' });
+    }
+
+    const orderId = `GOPAY-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+    const parameter = {
+      payment_type: 'gopay',
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: Number(amount),
+      },
+      customer_details: {
+        first_name: customer?.first_name || 'Guest',
+        email: customer?.email || 'guest@example.com',
+        phone: customer?.phone || '08111222333',
+      },
+      gopay: {
+        enable_callback: true,
+        callback_url: 'http://localhost:3000/gopay-finish',
+      },
+    };
+
+    const chargeResponse = await coreApi.charge(parameter);
+
+    // Ambil QR code URL dan deeplink dari response
+    const actions = chargeResponse.actions || [];
+    const qrCodeUrl = actions.find((a) => a.name === 'generate-qr-code')?.url || null;
+    const deeplinkUrl = actions.find((a) => a.name === 'deeplink-redirect')?.url || null;
+    const getStatusUrl = actions.find((a) => a.name === 'get-status')?.url || null;
+
+    // Simpan order
+    orders.set(orderId, {
+      orderId,
+      amount: Number(amount),
+      status: 'pending',
+      paymentType: 'gopay',
+      qrCodeUrl,
+      deeplinkUrl,
+      createdAt: new Date().toISOString(),
+    });
+
+    console.log(`✅ GoPay charge created: ${orderId} | Rp${amount}`);
+
+    res.json({
+      orderId,
+      status: chargeResponse.transaction_status,
+      qrCodeUrl,       // URL gambar QR code (bisa ditampilkan di <img>)
+      deeplinkUrl,     // Deeplink ke app GoPay (buat mobile)
+      getStatusUrl,
+      expiryTime: chargeResponse.expiry_time,
+    });
+  } catch (err) {
+    console.error('❌ charge-gopay error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Halaman setelah user selesai bayar di GoPay app
+app.get('/gopay-finish', (req, res) => {
+  res.send(`
+    <html>
+    <body style="font-family:sans-serif;text-align:center;padding:50px;">
+      <h1>✅ Terima kasih!</h1>
+      <p>Pembayaran GoPay sedang diproses.</p>
+      <a href="/">Kembali ke halaman utama</a>
+    </body>
+    </html>
+  `);
+});
+
+// =========================================================================
 // GET /api/status/:orderId -> cek status (utk polling dari frontend)
 // =========================================================================
 app.get('/api/status/:orderId', async (req, res) => {
