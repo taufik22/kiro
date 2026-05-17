@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pembayaran Berhasil!</title>
+  <title>Pembayaran Berhasil - ChatGPT Plus</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -13,65 +13,90 @@
       display: flex; align-items: center; justify-content: center; padding: 20px;
     }
     .card {
-      background: #fff; border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-      padding: 40px; width: 100%; max-width: 460px; text-align: center;
+      background: #fff; border-radius: 20px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.2);
+      padding: 40px; width: 100%; max-width: 500px; text-align: center;
     }
-    .icon { font-size: 64px; margin-bottom: 16px; }
-    h1 { color: #166534; font-size: 24px; margin-bottom: 8px; }
-    p { color: #555; font-size: 14px; margin-bottom: 8px; }
+    .icon { font-size: 72px; margin-bottom: 16px; }
+    h1 { color: #166534; font-size: 26px; margin-bottom: 8px; }
+    .subtitle { color: #555; font-size: 14px; margin-bottom: 20px; line-height: 1.6; }
     .order-id {
-      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
-      padding: 12px; margin: 16px 0; font-family: monospace; font-size: 13px; color: #166534;
+      background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+      padding: 14px; margin: 16px 0; font-family: monospace; font-size: 14px; color: #166534;
     }
     .details {
-      text-align: left; background: #f8fafc; border-radius: 8px;
-      padding: 16px; margin: 16px 0; font-size: 13px;
+      text-align: left; background: #f8fafc; border-radius: 12px;
+      padding: 20px; margin: 20px 0; font-size: 14px;
     }
     .details .row {
-      display: flex; justify-content: space-between; padding: 6px 0;
+      display: flex; justify-content: space-between; padding: 8px 0;
       border-bottom: 1px solid #e2e8f0;
     }
     .details .row:last-child { border-bottom: none; }
     .details .label { color: #888; }
     .details .value { color: #333; font-weight: 600; }
+    .next-steps {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+      padding: 16px; margin: 20px 0; text-align: left; font-size: 13px; color: #1e40af;
+    }
+    .next-steps h4 { margin-bottom: 8px; }
+    .next-steps ol { padding-left: 20px; line-height: 1.8; }
     .btn {
       display: inline-block; margin-top: 20px; padding: 14px 32px;
-      background: #00aa13; color: #fff; border-radius: 8px;
-      text-decoration: none; font-weight: 600; font-size: 14px;
+      background: linear-gradient(135deg, #10a37f, #1a7f64);
+      color: #fff; border-radius: 10px;
+      text-decoration: none; font-weight: 700; font-size: 15px;
       transition: all 0.2s;
     }
-    .btn:hover { background: #008c10; transform: translateY(-1px); }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,163,127,0.3); }
+    .secondary-link {
+      display: block; margin-top: 14px; color: #888; font-size: 13px; text-decoration: none;
+    }
+    .secondary-link:hover { color: #10a37f; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="icon">✅</div>
     <h1>Pembayaran Berhasil!</h1>
-    <p>Terima kasih, pembayaran GoPay kamu sudah diterima.</p>
+    <p class="subtitle">
+      Terima kasih! Pembayaran kamu sudah kami terima.<br/>
+      Akun ChatGPT kamu akan segera diaktifkan.
+    </p>
 
     <div class="order-id" id="orderId">Loading...</div>
 
     <div class="details" id="details">
       <div class="row">
         <span class="label">Status</span>
-        <span class="value" style="color:#16a34a;">SUKSES</span>
+        <span class="value" style="color:#16a34a;">✓ BERHASIL</span>
       </div>
       <div class="row">
-        <span class="label">Metode</span>
+        <span class="label">Metode Pembayaran</span>
         <span class="value">GoPay</span>
       </div>
       <div class="row">
-        <span class="label">Waktu</span>
+        <span class="label">Waktu Pembayaran</span>
         <span class="value" id="txTime">-</span>
+      </div>
+      <div class="row">
+        <span class="label">Email</span>
+        <span class="value" id="txEmail">-</span>
       </div>
     </div>
 
-    <a class="btn" href="/gopay">Buat Pembayaran Lagi</a>
-    <br />
-    <a href="/" style="display:inline-block; margin-top:12px; color:#667; font-size:13px;">
-      ← Kembali ke Halaman Utama
-    </a>
+    <div class="next-steps">
+      <h4>📋 Langkah Selanjutnya:</h4>
+      <ol>
+        <li>Kami akan memproses aktivasi akun ChatGPT kamu</li>
+        <li>Konfirmasi akan dikirim ke email dalam 1-24 jam</li>
+        <li>Cek folder spam jika tidak menerima email</li>
+        <li>Hubungi support jika ada masalah</li>
+      </ol>
+    </div>
+
+    <a class="btn" href="/">Kembali ke Beranda</a>
+    <a class="secondary-link" href="/gopay">Buat Pembayaran Lagi</a>
   </div>
 
   <script>
@@ -80,12 +105,15 @@
     document.getElementById('orderId').textContent = `Order ID: ${orderId}`;
     document.getElementById('txTime').textContent = new Date().toLocaleString('id-ID');
 
-    // Optional: fetch actual status
+    // Fetch actual order status
     if (orderId && orderId !== '-') {
       fetch(`/api/status/${orderId}`)
         .then(r => r.json())
         .then(data => {
-          console.log('Status:', data);
+          if (data.customerEmail) {
+            document.getElementById('txEmail').textContent = data.customerEmail;
+          }
+          console.log('Order status:', data);
         })
         .catch(() => {});
     }
