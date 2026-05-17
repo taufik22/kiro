@@ -3,15 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Midtrans Snap - Demo Checkout</title>
-
-  <!-- Snap.js akan di-load secara dinamis setelah dapat client key dari /api/config -->
-
+  <title>Pembayaran ChatGPT Plus - GoPay via Midtrans</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -20,258 +17,468 @@
     }
     .card {
       background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      padding: 32px;
+      border-radius: 20px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+      padding: 36px;
       width: 100%;
-      max-width: 480px;
+      max-width: 520px;
     }
-    h1 {
-      color: #333;
-      margin-bottom: 8px;
-      font-size: 24px;
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 6px;
     }
-    .subtitle {
-      color: #888;
-      font-size: 14px;
-      margin-bottom: 24px;
+    .chatgpt-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #10a37f, #1a7f64);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      color: #fff;
+      font-weight: bold;
     }
+    h1 { color: #1a1a2e; font-size: 22px; }
+    .subtitle { color: #666; font-size: 13px; margin-bottom: 20px; }
     .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-bottom: 16px;
+      display: inline-block; padding: 4px 12px; border-radius: 12px;
+      font-size: 11px; font-weight: 600; margin-bottom: 14px;
     }
     .badge.sandbox { background: #fef3c7; color: #92400e; }
     .badge.production { background: #dcfce7; color: #166534; }
 
-    .form-group { margin-bottom: 16px; }
-    label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 6px;
+    /* Plan selection */
+    .plans {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
     }
-    input {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 14px;
-      transition: border 0.2s;
-    }
-    input:focus {
-      outline: none;
-      border-color: #667eea;
-    }
-    button {
-      width: 100%;
-      padding: 14px;
-      background: #667eea;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 600;
+    .plan {
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
       cursor: pointer;
       transition: all 0.2s;
-      margin-top: 8px;
+      position: relative;
     }
-    button:hover:not(:disabled) {
-      background: #5a67d8;
-      transform: translateY(-1px);
+    .plan:hover { border-color: #10a37f; }
+    .plan.selected {
+      border-color: #10a37f;
+      background: #f0fdf9;
     }
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .plan.selected::after {
+      content: '✓';
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: #10a37f;
+      color: #fff;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
     }
-    .status {
-      margin-top: 16px;
-      padding: 12px;
-      border-radius: 8px;
+    .plan-name { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+    .plan-price { font-size: 18px; font-weight: 800; color: #10a37f; }
+    .plan-period { font-size: 11px; color: #888; }
+    .plan-features { font-size: 11px; color: #555; margin-top: 8px; line-height: 1.5; }
+
+    .popular-badge {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #10a37f, #1a7f64);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 10px;
+      text-transform: uppercase;
+    }
+
+    /* Payment methods */
+    .payment-methods {
+      margin-bottom: 20px;
+    }
+    .payment-methods h3 {
+      font-size: 13px; color: #555; margin-bottom: 10px; font-weight: 600;
+    }
+    .method-options {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .method-option {
+      flex: 1; min-width: 120px;
+      border: 2px solid #e2e8f0; border-radius: 10px;
+      padding: 12px; text-align: center; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .method-option:hover { border-color: #10a37f; }
+    .method-option.selected { border-color: #10a37f; background: #f0fdf9; }
+    .method-option .icon { font-size: 24px; margin-bottom: 4px; }
+    .method-option .name { font-size: 12px; font-weight: 600; color: #333; }
+
+    .form-group { margin-bottom: 14px; }
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #555; margin-bottom: 5px;
+    }
+    input {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 14px; transition: border 0.2s;
+    }
+    input:focus { outline: none; border-color: #10a37f; }
+
+    .summary {
+      background: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 16px;
+      border: 1px solid #e2e8f0;
+    }
+    .summary-row {
+      display: flex; justify-content: space-between; padding: 6px 0;
       font-size: 13px;
-      display: none;
+    }
+    .summary-row.total {
+      border-top: 2px solid #e2e8f0; margin-top: 8px; padding-top: 10px;
+      font-weight: 700; font-size: 16px; color: #1a1a2e;
+    }
+    .summary-label { color: #666; }
+    .summary-value { color: #333; font-weight: 600; }
+
+    .pay-btn {
+      width: 100%; padding: 16px; 
+      background: linear-gradient(135deg, #10a37f, #1a7f64);
+      color: #fff; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; display: flex;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+    .pay-btn:hover:not(:disabled) { 
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(16,163,127,0.4);
+    }
+    .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .secure-badge {
+      display: flex; align-items: center; justify-content: center;
+      gap: 6px; margin-top: 12px; font-size: 11px; color: #888;
+    }
+
+    .status {
+      margin-top: 16px; padding: 14px; border-radius: 10px;
+      font-size: 13px; display: none;
     }
     .status.show { display: block; }
-    .status.success { background: #dcfce7; color: #166534; }
-    .status.error { background: #fee2e2; color: #991b1b; }
-    .status.info { background: #dbeafe; color: #1e40af; }
+    .status.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .status.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .status.info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+    .status.warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
 
-    .test-card {
-      background: #f8fafc;
-      border-left: 3px solid #667eea;
-      padding: 12px;
-      margin-top: 20px;
-      font-size: 12px;
-      border-radius: 6px;
+    .info-box {
+      background: #f0fdf9; border: 1px solid #99f6e4; border-radius: 10px;
+      padding: 14px; margin-top: 20px; font-size: 12px; color: #0d9488;
     }
-    .test-card strong { color: #333; }
-    .test-card code {
-      background: #fff;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 11px;
+    .info-box strong { display: block; margin-bottom: 4px; }
+
+    .footer-links {
+      display: flex; justify-content: center; gap: 16px; margin-top: 16px;
+    }
+    .footer-links a {
+      font-size: 12px; color: #888; text-decoration: none;
+    }
+    .footer-links a:hover { color: #10a37f; }
+
+    @media (max-width: 480px) {
+      .plans { grid-template-columns: 1fr; }
+      .card { padding: 24px; }
     }
   </style>
 </head>
 <body>
   <div class="card">
     <span id="modeBadge" class="badge sandbox">SANDBOX</span>
-    <h1>💳 Midtrans Snap Demo</h1>
-    <p class="subtitle">Test checkout dengan Snap popup</p>
 
+    <div class="header">
+      <div class="chatgpt-icon">G</div>
+      <div>
+        <h1>ChatGPT Plus</h1>
+        <p style="font-size:12px; color:#888;">Pembayaran via GoPay / Midtrans</p>
+      </div>
+    </div>
+    <p class="subtitle">Bayar langganan ChatGPT Plus dengan mudah menggunakan GoPay, QRIS, atau transfer bank.</p>
+
+    <!-- Plan Selection -->
+    <div class="plans">
+      <div class="plan selected" onclick="selectPlan('plus', 320000)" id="planPlus">
+        <div class="popular-badge">Populer</div>
+        <div class="plan-name">ChatGPT Plus</div>
+        <div class="plan-price">Rp 320.000</div>
+        <div class="plan-period">/bulan</div>
+        <div class="plan-features">
+          ✓ GPT-4o access<br/>
+          ✓ Faster responses<br/>
+          ✓ Image generation
+        </div>
+      </div>
+      <div class="plan" onclick="selectPlan('pro', 3200000)" id="planPro">
+        <div class="plan-name">ChatGPT Pro</div>
+        <div class="plan-price">Rp 3.200.000</div>
+        <div class="plan-period">/bulan</div>
+        <div class="plan-features">
+          ✓ Unlimited GPT-4o<br/>
+          ✓ o1 pro mode<br/>
+          ✓ Priority access
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Method -->
+    <div class="payment-methods">
+      <h3>Metode Pembayaran</h3>
+      <div class="method-options">
+        <div class="method-option selected" onclick="selectMethod('gopay')" id="methodGopay">
+          <div class="icon">💚</div>
+          <div class="name">GoPay</div>
+        </div>
+        <div class="method-option" onclick="selectMethod('qris')" id="methodQris">
+          <div class="icon">📱</div>
+          <div class="name">QRIS</div>
+        </div>
+        <div class="method-option" onclick="selectMethod('all')" id="methodAll">
+          <div class="icon">🏦</div>
+          <div class="name">Lainnya</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Form -->
     <form id="checkoutForm">
       <div class="form-group">
-        <label for="name">Nama</label>
-        <input type="text" id="name" value="Budi Santoso" required />
+        <label for="name">Nama Lengkap</label>
+        <input type="text" id="name" placeholder="Masukkan nama lengkap" required />
       </div>
-
       <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" value="budi@example.com" required />
+        <label for="email">Email (akun ChatGPT)</label>
+        <input type="email" id="email" placeholder="email@chatgpt-kamu.com" required />
       </div>
-
       <div class="form-group">
-        <label for="phone">No. HP</label>
-        <input type="tel" id="phone" value="08111222333" required />
+        <label for="phone">No. HP (GoPay)</label>
+        <input type="tel" id="phone" placeholder="08xxxxxxxxxx" required />
       </div>
 
-      <div class="form-group">
-        <label for="amount">Jumlah (Rp)</label>
-        <input type="number" id="amount" value="50000" min="1000" required />
+      <!-- Order Summary -->
+      <div class="summary">
+        <div class="summary-row">
+          <span class="summary-label">Paket</span>
+          <span class="summary-value" id="summaryPlan">ChatGPT Plus (1 bulan)</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Metode</span>
+          <span class="summary-value" id="summaryMethod">GoPay</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Biaya Admin</span>
+          <span class="summary-value" id="summaryFee">Rp 0</span>
+        </div>
+        <div class="summary-row total">
+          <span class="summary-label">Total</span>
+          <span class="summary-value" id="summaryTotal">Rp 320.000</span>
+        </div>
       </div>
 
-      <button type="submit" id="payBtn">Bayar Sekarang</button>
+      <button type="submit" class="pay-btn" id="payBtn">
+        <span>🔒</span>
+        <span id="payBtnText">Bayar Rp 320.000</span>
+      </button>
     </form>
+
+    <div class="secure-badge">
+      <span>🔒</span>
+      <span>Secured by Midtrans · PCI DSS Certified</span>
+    </div>
 
     <div id="status" class="status"></div>
 
-    <div style="margin-top:16px; text-align:center;">
-      <a href="/gopay.html" style="color:#00aa13; font-weight:600; font-size:14px;">
-        📱 Bayar langsung dengan GoPay (tanpa popup) →
-      </a>
+    <div class="info-box">
+      <strong>ℹ️ Cara kerja:</strong>
+      1. Pilih paket & bayar via GoPay/QRIS<br/>
+      2. Setelah pembayaran berhasil, akun ChatGPT kamu akan diaktifkan dalam 1-24 jam<br/>
+      3. Konfirmasi akan dikirim ke email kamu
     </div>
 
-    <div class="test-card">
-      <strong>💡 Test Card (Sandbox):</strong><br />
-      Card: <code>4811 1111 1111 1114</code><br />
-      CVV: <code>123</code> · Exp: <code>01/25</code> · OTP: <code>112233</code>
+    <div class="footer-links">
+      <a href="/gopay">GoPay Direct</a>
+      <a href="#">Bantuan</a>
+      <a href="#">Syarat & Ketentuan</a>
     </div>
   </div>
 
   <script>
+    let selectedPlan = { name: 'plus', price: 320000, label: 'ChatGPT Plus' };
+    let selectedMethod = 'gopay';
     let config = null;
 
-    // Load config & Snap.js
     async function init() {
-      const res = await fetch('/api/config');
-      config = await res.json();
+      try {
+        const res = await fetch('/api/config');
+        config = await res.json();
+        const badge = document.getElementById('modeBadge');
+        if (config.isProduction) {
+          badge.textContent = 'PRODUCTION';
+          badge.className = 'badge production';
+        }
 
-      // Update badge
-      const badge = document.getElementById('modeBadge');
-      if (config.isProduction) {
-        badge.textContent = 'PRODUCTION';
-        badge.className = 'badge production';
+        // Load Snap.js
+        const script = document.createElement('script');
+        script.src = config.isProduction
+          ? 'https://app.midtrans.com/snap/snap.js'
+          : 'https://app.sandbox.midtrans.com/snap/snap.js';
+        script.setAttribute('data-client-key', config.clientKey);
+        document.head.appendChild(script);
+      } catch(e) {
+        console.error('Failed to load config:', e);
       }
+    }
 
-      // Inject Snap.js dengan client key
-      const script = document.createElement('script');
-      script.src = config.isProduction
-        ? 'https://app.midtrans.com/snap/snap.js'
-        : 'https://app.sandbox.midtrans.com/snap/snap.js';
-      script.setAttribute('data-client-key', config.clientKey);
-      document.head.appendChild(script);
+    function selectPlan(plan, price) {
+      selectedPlan = { 
+        name: plan, 
+        price, 
+        label: plan === 'plus' ? 'ChatGPT Plus' : 'ChatGPT Pro' 
+      };
+      
+      // Update UI
+      document.querySelectorAll('.plan').forEach(el => el.classList.remove('selected'));
+      document.getElementById(plan === 'plus' ? 'planPlus' : 'planPro').classList.add('selected');
+      updateSummary();
+    }
+
+    function selectMethod(method) {
+      selectedMethod = method;
+      document.querySelectorAll('.method-option').forEach(el => el.classList.remove('selected'));
+      document.getElementById('method' + method.charAt(0).toUpperCase() + method.slice(1)).classList.add('selected');
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const methodLabels = { gopay: 'GoPay', qris: 'QRIS', all: 'Semua Metode' };
+      document.getElementById('summaryPlan').textContent = `${selectedPlan.label} (1 bulan)`;
+      document.getElementById('summaryMethod').textContent = methodLabels[selectedMethod] || selectedMethod;
+      document.getElementById('summaryFee').textContent = 'Rp 0';
+      document.getElementById('summaryTotal').textContent = 'Rp ' + selectedPlan.price.toLocaleString('id-ID');
+      document.getElementById('payBtnText').textContent = `Bayar Rp ${selectedPlan.price.toLocaleString('id-ID')}`;
     }
 
     function showStatus(message, type = 'info') {
       const el = document.getElementById('status');
       el.className = `status show ${type}`;
-      el.textContent = message;
+      el.innerHTML = message;
     }
 
     document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('payBtn');
       btn.disabled = true;
-      btn.textContent = 'Memproses...';
-      showStatus('Membuat transaksi...', 'info');
+      document.getElementById('payBtnText').textContent = 'Memproses...';
 
       try {
         const payload = {
-          amount: Number(document.getElementById('amount').value),
+          amount: selectedPlan.price,
+          plan: selectedPlan.name,
+          method: selectedMethod,
           customer: {
             first_name: document.getElementById('name').value,
             email: document.getElementById('email').value,
             phone: document.getElementById('phone').value,
           },
-          items: [
-            {
-              id: 'ITEM-DEMO',
-              price: Number(document.getElementById('amount').value),
-              quantity: 1,
-              name: 'Demo Product',
-            },
-          ],
+          items: [{
+            id: `CHATGPT-${selectedPlan.name.toUpperCase()}`,
+            price: selectedPlan.price,
+            quantity: 1,
+            name: `${selectedPlan.label} - 1 Bulan`,
+          }]
         };
 
-        const res = await fetch('/api/create-transaction', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        // Route berdasarkan metode
+        if (selectedMethod === 'gopay') {
+          // GoPay redirect
+          const res = await fetch('/api/create-gopay-redirect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Gagal membuat transaksi');
+          showStatus(
+            `✅ Order <strong>${data.orderId}</strong> dibuat!<br/>Mengarahkan ke pembayaran GoPay...`,
+            'success'
+          );
+          setTimeout(() => { window.location.href = data.redirectUrl; }, 1500);
 
-        showStatus(`Order ID: ${data.orderId}`, 'info');
+        } else if (selectedMethod === 'qris') {
+          // QR Code GoPay
+          const res = await fetch('/api/charge-gopay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
 
-        // Trigger Snap popup
-        window.snap.pay(data.token, {
-          onSuccess: (result) => {
-            console.log('SUCCESS:', result);
-            showStatus(`✅ Pembayaran berhasil! Order: ${data.orderId}`, 'success');
-            pollStatus(data.orderId);
-          },
-          onPending: (result) => {
-            console.log('PENDING:', result);
-            showStatus(`⏳ Menunggu pembayaran. Order: ${data.orderId}`, 'info');
-            pollStatus(data.orderId);
-          },
-          onError: (result) => {
-            console.error('ERROR:', result);
-            showStatus(`❌ Pembayaran gagal: ${result.status_message || 'unknown'}`, 'error');
-          },
-          onClose: () => {
-            showStatus('Popup ditutup tanpa menyelesaikan pembayaran.', 'info');
-          },
-        });
+          showStatus(
+            `📱 Scan QR Code untuk membayar<br/>Order: <strong>${data.orderId}</strong>`,
+            'info'
+          );
+
+          // Show QR in new window or inline
+          if (data.qrCodeUrl) {
+            window.open(data.qrCodeUrl, '_blank');
+          }
+
+        } else {
+          // All methods via Snap popup
+          const res = await fetch('/api/create-transaction', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+
+          showStatus(`Order: ${data.orderId}`, 'info');
+
+          window.snap.pay(data.token, {
+            onSuccess: (result) => {
+              showStatus(`✅ Pembayaran berhasil! Order: ${data.orderId}<br/>Akun ChatGPT kamu akan diaktifkan dalam 1-24 jam.`, 'success');
+            },
+            onPending: (result) => {
+              showStatus(`⏳ Menunggu pembayaran... Order: ${data.orderId}`, 'warning');
+            },
+            onError: (result) => {
+              showStatus(`❌ Pembayaran gagal.`, 'error');
+            },
+            onClose: () => {
+              showStatus('Popup ditutup. Silakan coba lagi.', 'info');
+            },
+          });
+        }
+
       } catch (err) {
-        showStatus(`❌ ${err.message}`, 'error');
+        showStatus(`❌ Error: ${err.message}`, 'error');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Bayar Sekarang';
+        document.getElementById('payBtnText').textContent = `Bayar Rp ${selectedPlan.price.toLocaleString('id-ID')}`;
       }
     });
-
-    // Polling status setiap 5 detik (max 12x = 1 menit)
-    async function pollStatus(orderId, attempt = 0) {
-      if (attempt > 12) return;
-      try {
-        const res = await fetch(`/api/status/${orderId}`);
-        const data = await res.json();
-        console.log(`[poll #${attempt}]`, data);
-        if (data.status === 'paid' || data.status === 'settlement' || data.status === 'capture') {
-          showStatus(`✅ Status final: PAID (${orderId})`, 'success');
-          return;
-        }
-        setTimeout(() => pollStatus(orderId, attempt + 1), 5000);
-      } catch (e) {
-        console.error(e);
-      }
-    }
 
     init();
   </script>

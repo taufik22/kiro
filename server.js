@@ -1,15 +1,19 @@
 // =========================================================================
-// Midtrans Snap Redirect + GoPay Tokenization - Express Server
+// ChatGPT Plus Payment Gateway - GoPay via Midtrans
 // =========================================================================
+// Web app untuk pembayaran langganan ChatGPT Plus menggunakan GoPay/QRIS
+// melalui payment gateway Midtrans.
+//
 // Endpoints:
-//   GET  /                            -> halaman utama (pilih metode)
+//   GET  /                            -> halaman checkout utama
 //   GET  /gopay                       -> halaman checkout GoPay redirect
 //   POST /api/create-gopay-redirect   -> bikin transaksi Snap khusus GoPay
 //                                        & return redirect_url ke Midtrans
 //   POST /api/create-transaction      -> bikin transaksi Snap (semua metode)
-//   POST /api/charge-gopay            -> direct charge GoPay (QR code)
+//   POST /api/charge-gopay            -> direct charge GoPay (QR/QRIS)
 //   POST /api/notification            -> webhook handler dari Midtrans
 //   GET  /api/status/:orderId         -> cek status transaksi
+//   GET  /api/orders                  -> list semua orders
 //   GET  /payment/finish              -> redirect setelah bayar sukses
 //   GET  /payment/unfinish            -> redirect jika belum selesai
 //   GET  /payment/error               -> redirect jika error
@@ -83,13 +87,14 @@ app.get('/api/config', (req, res) => {
 // =========================================================================
 app.post('/api/create-gopay-redirect', async (req, res) => {
   try {
-    const { amount, customer, items } = req.body;
+    const { amount, customer, items, plan, method } = req.body;
 
     if (!amount || amount < 1) {
       return res.status(400).json({ error: 'amount wajib diisi & > 0' });
     }
 
-    const orderId = `GOPAY-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const planLabel = plan === 'pro' ? 'ChatGPT Pro' : 'ChatGPT Plus';
+    const orderId = `CGP-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
     const parameter = {
       transaction_details: {
@@ -105,10 +110,10 @@ app.post('/api/create-gopay-redirect', async (req, res) => {
         ? items
         : [
             {
-              id: 'GOPAY-ITEM',
+              id: `CHATGPT-${(plan || 'plus').toUpperCase()}`,
               price: Number(amount),
               quantity: 1,
-              name: 'Pembayaran GoPay',
+              name: `${planLabel} - 1 Bulan`,
             },
           ],
       // === KUNCI: Hanya aktifkan GoPay ===
@@ -131,22 +136,26 @@ app.post('/api/create-gopay-redirect', async (req, res) => {
     // Simpan order
     orders.set(orderId, {
       orderId,
+      plan: plan || 'plus',
+      planLabel,
       amount: Number(amount),
       status: 'pending',
       paymentType: 'gopay',
+      customerEmail: customer?.email || 'guest@example.com',
+      customerName: customer?.first_name || 'Guest',
+      customerPhone: customer?.phone || '',
       snapToken: transaction.token,
       redirectUrl: transaction.redirect_url,
       createdAt: new Date().toISOString(),
     });
 
-    console.log(`✅ GoPay Redirect created: ${orderId} | Rp${amount}`);
+    console.log(`✅ [${planLabel}] GoPay Redirect created: ${orderId} | Rp${amount.toLocaleString()}`);
+    console.log(`   Customer: ${customer?.email || 'guest'}`);
     console.log(`   Redirect URL: ${transaction.redirect_url}`);
 
     res.json({
       orderId,
       token: transaction.token,
-      // INI URL yang seperti contoh kamu:
-      // https://app.midtrans.com/snap/v4/redirection/{token}#/gopay-tokenization/pay
       redirectUrl: transaction.redirect_url,
     });
   } catch (err) {
@@ -178,13 +187,14 @@ app.get('/payment/error', (req, res) => {
 // =========================================================================
 app.post('/api/create-transaction', async (req, res) => {
   try {
-    const { amount, customer, items } = req.body;
+    const { amount, customer, items, plan } = req.body;
 
     if (!amount || amount < 1) {
       return res.status(400).json({ error: 'amount wajib diisi & > 0' });
     }
 
-    const orderId = `ORDER-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const planLabel = plan === 'pro' ? 'ChatGPT Pro' : (plan === 'plus' ? 'ChatGPT Plus' : 'Custom');
+    const orderId = `CGP-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
     const parameter = {
       transaction_details: {
@@ -199,19 +209,29 @@ app.post('/api/create-transaction', async (req, res) => {
       },
       item_details: items?.length
         ? items
-        : [{ id: 'ITEM-1', price: Number(amount), quantity: 1, name: 'Default Item' }],
+        : [{ id: 'ITEM-1', price: Number(amount), quantity: 1, name: `${planLabel} - 1 Bulan` }],
+      callbacks: {
+        finish: `${BASE_URL}/payment/finish?order_id=${orderId}`,
+        unfinish: `${BASE_URL}/payment/unfinish?order_id=${orderId}`,
+        error: `${BASE_URL}/payment/error?order_id=${orderId}`,
+      },
     };
 
     const transaction = await snap.createTransaction(parameter);
 
     orders.set(orderId, {
       orderId,
+      plan: plan || 'plus',
+      planLabel,
       amount: Number(amount),
       status: 'pending',
+      paymentType: 'snap',
+      customerEmail: customer?.email || 'guest@example.com',
+      customerName: customer?.first_name || 'Guest',
       createdAt: new Date().toISOString(),
     });
 
-    console.log(`✅ Transaction created: ${orderId} | Rp${amount}`);
+    console.log(`✅ [${planLabel}] Snap transaction created: ${orderId} | Rp${amount.toLocaleString()}`);
 
     res.json({
       orderId,
@@ -229,13 +249,14 @@ app.post('/api/create-transaction', async (req, res) => {
 // =========================================================================
 app.post('/api/charge-gopay', async (req, res) => {
   try {
-    const { amount, customer } = req.body;
+    const { amount, customer, plan } = req.body;
 
     if (!amount || amount < 1) {
       return res.status(400).json({ error: 'amount wajib diisi & > 0' });
     }
 
-    const orderId = `GOPAY-QR-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const planLabel = plan === 'pro' ? 'ChatGPT Pro' : (plan === 'plus' ? 'ChatGPT Plus' : 'Custom');
+    const orderId = `CGP-QR-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
     const parameter = {
       payment_type: 'gopay',
@@ -262,15 +283,19 @@ app.post('/api/charge-gopay', async (req, res) => {
 
     orders.set(orderId, {
       orderId,
+      plan: plan || 'plus',
+      planLabel,
       amount: Number(amount),
       status: 'pending',
-      paymentType: 'gopay',
+      paymentType: 'gopay-qris',
+      customerEmail: customer?.email || 'guest@example.com',
+      customerName: customer?.first_name || 'Guest',
       qrCodeUrl,
       deeplinkUrl,
       createdAt: new Date().toISOString(),
     });
 
-    console.log(`✅ GoPay QR charge created: ${orderId} | Rp${amount}`);
+    console.log(`✅ [${planLabel}] GoPay QR/QRIS created: ${orderId} | Rp${amount.toLocaleString()}`);
 
     res.json({
       orderId,
@@ -347,6 +372,15 @@ app.post('/api/notification', async (req, res) => {
     console.error('❌ notification error:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// =========================================================================
+// GET /api/orders - List semua orders (untuk admin)
+// =========================================================================
+app.get('/api/orders', (req, res) => {
+  const allOrders = Array.from(orders.values())
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ total: allOrders.length, orders: allOrders });
 });
 
 // =========================================================================
