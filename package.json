@@ -19,6 +19,7 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "midtrans-client": "^1.4.2"
+    "midtrans-client": "^1.4.2",
+    "pdfkit": "^0.15.0"
   }
 }
