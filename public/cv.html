@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CV ATS-Friendly Generator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      background: #f4f6fa;
+      color: #1f2937;
+      line-height: 1.5;
+    }
+    .container { max-width: 880px; margin: 0 auto; padding: 32px 20px; }
+    h1 { color: #1a4d8f; margin: 0 0 8px; }
+    p.lead { color: #555; margin: 0 0 24px; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 22px 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .card h2 {
+      color: #1a4d8f;
+      font-size: 16px;
+      margin: 0 0 14px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #1a4d8f;
+    }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #374151; }
+    input, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #1a4d8f; box-shadow: 0 0 0 3px rgba(26,77,143,0.12); }
+    textarea { resize: vertical; min-height: 70px; }
+
+    .field { margin-bottom: 12px; }
+
+    .item {
+      border: 1px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fafbfc;
+      position: relative;
+    }
+    .item .remove {
+      position: absolute; top: 8px; right: 8px;
+      background: transparent; border: none;
+      color: #ef4444; cursor: pointer; font-size: 13px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 9px 16px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary { background: #1a4d8f; color: #fff; }
+    .btn-primary:hover { background: #163e74; }
+    .btn-secondary { background: #fff; color: #1a4d8f; border-color: #1a4d8f; }
+    .btn-secondary:hover { background: #eef3fb; }
+    .btn-ghost { background: transparent; color: #1a4d8f; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+
+    .hint { font-size: 12px; color: #6b7280; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>CV ATS-Friendly Generator</h1>
+    <p class="lead">Isi data di bawah, lalu klik <b>Download PDF</b>. Output sudah teks asli (selectable) — aman untuk parser ATS.</p>
+
+    <form id="cv-form">
+      <!-- Personal -->
+      <section class="card">
+        <h2>Personal Info</h2>
+        <div class="row">
+          <div class="field"><label>Nama Lengkap *</label><input name="name" required></div>
+          <div class="field"><label>Headline / Posisi</label><input name="headline" placeholder="Head of Investment Operations & Customer Service"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Lokasi</label><input name="location" placeholder="Tangerang, Banten"></div>
+          <div class="field"><label>No. Telepon</label><input name="phone" placeholder="0812 8094 4114"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Email</label><input name="email" type="email" placeholder="nama@email.com"></div>
+          <div class="field"><label>LinkedIn (opsional)</label><input name="linkedin" placeholder="linkedin.com/in/username"></div>
+        </div>
+      </section>
+
+      <!-- Summary -->
+      <section class="card">
+        <h2>Summary</h2>
+        <div class="field">
+          <textarea name="summary" rows="4" placeholder="Ringkasan profesional 2-4 kalimat..."></textarea>
+        </div>
+      </section>
+
+      <!-- Experience -->
+      <section class="card">
+        <h2>Experience</h2>
+        <div id="experience-list"></div>
+        <button type="button" class="btn btn-secondary" onclick="addExperience()">+ Tambah Pengalaman</button>
+      </section>
+
+      <!-- Skills -->
+      <section class="card">
+        <h2>Skills</h2>
+        <div class="field">
+          <label>Daftar skill (pisahkan dengan koma)</label>
+          <textarea id="skills-input" rows="3" placeholder="Investment Operations Management, Fund Accounting, Mutual Fund Operations"></textarea>
+          <div class="hint">Tip: tambahkan level dalam tanda kurung, contoh: "Excel (Advanced), Python (Intermediate)".</div>
+        </div>
+      </section>
+
+      <!-- Education -->
+      <section class="card">
+        <h2>Education</h2>
+        <div id="education-list"></div>
+        <button type="button" class="btn btn-secondary" onclick="addEducation()">+ Tambah Pendidikan</button>
+      </section>
+
+      <!-- Certifications -->
+      <section class="card">
+        <h2>Certifications</h2>
+        <div id="certifications-list"></div>
+        <button type="button" class="btn btn-secondary" onclick="addCertification()">+ Tambah Sertifikasi</button>
+      </section>
+
+      <!-- Languages -->
+      <section class="card">
+        <h2>Languages</h2>
+        <div class="field">
+          <label>Bahasa (pisahkan dengan koma)</label>
+          <input id="languages-input" placeholder="English, Bahasa Indonesia">
+          <div class="hint">Bisa juga: "English (Fluent), Bahasa Indonesia (Native)".</div>
+        </div>
+      </section>
+
+      <div class="btn-row">
+        <button type="submit" class="btn btn-primary">Download PDF</button>
+        <a href="/generate-cv" class="btn btn-secondary" target="_blank" rel="noopener">Download contoh (Hanna Fransiska)</a>
+        <button type="button" class="btn btn-ghost" onclick="loadSample()">Isi otomatis dengan contoh</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    /* ----------------------------- dynamic rows ----------------------------- */
+    function addExperience(data = {}) {
+      const list = document.getElementById('experience-list');
+      const idx = list.children.length;
+      const node = document.createElement('div');
+      node.className = 'item';
+      node.dataset.kind = 'experience';
+      node.innerHTML = `
+        <button type="button" class="remove" onclick="this.parentNode.remove()">Hapus</button>
+        <div class="row">
+          <div class="field"><label>Perusahaan</label><input data-key="company" value="${escapeHtml(data.company || '')}"></div>
+          <div class="field"><label>Posisi</label><input data-key="title" value="${escapeHtml(data.title || '')}"></div>
+        </div>
+        <div class="field"><label>Periode</label><input data-key="period" placeholder="August 2022 – Present" value="${escapeHtml(data.period || '')}"></div>
+        <div class="field"><label>Tanggung jawab / pencapaian (1 baris per bullet)</label>
+          <textarea data-key="bullets" rows="3" placeholder="Lead and manage end-to-end investment operations.\nHandle offshore investment products.">${escapeHtml((data.bullets || []).join('\n'))}</textarea>
+        </div>`;
+      list.appendChild(node);
+    }
+
+    function addEducation(data = {}) {
+      const list = document.getElementById('education-list');
+      const node = document.createElement('div');
+      node.className = 'item';
+      node.dataset.kind = 'education';
+      node.innerHTML = `
+        <button type="button" class="remove" onclick="this.parentNode.remove()">Hapus</button>
+        <div class="row">
+          <div class="field"><label>Institusi</label><input data-key="school" value="${escapeHtml(data.school || '')}"></div>
+          <div class="field"><label>Gelar / Jurusan</label><input data-key="degree" value="${escapeHtml(data.degree || '')}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Periode (opsional)</label><input data-key="period" value="${escapeHtml(data.period || '')}"></div>
+          <div class="field"><label>GPA (opsional)</label><input data-key="gpa" placeholder="3.5 / 4.0" value="${escapeHtml(data.gpa || '')}"></div>
+        </div>`;
+      list.appendChild(node);
+    }
+
+    function addCertification(data = {}) {
+      const list = document.getElementById('certifications-list');
+      const node = document.createElement('div');
+      node.className = 'item';
+      node.dataset.kind = 'certification';
+      node.innerHTML = `
+        <button type="button" class="remove" onclick="this.parentNode.remove()">Hapus</button>
+        <div class="row">
+          <div class="field"><label>Nama Sertifikasi</label><input data-key="name" value="${escapeHtml(data.name || '')}"></div>
+          <div class="field"><label>Penerbit</label><input data-key="issuer" placeholder="Otoritas Jasa Keuangan (OJK)" value="${escapeHtml(data.issuer || '')}"></div>
+        </div>
+        <div class="field"><label>Tanggal (opsional)</label><input data-key="date" value="${escapeHtml(data.date || '')}"></div>`;
+      list.appendChild(node);
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    /* ------------------------------ collect data ----------------------------- */
+    function collectData() {
+      const form = document.getElementById('cv-form');
+      const fd = new FormData(form);
+      const data = {
+        name: fd.get('name')?.trim() || '',
+        headline: fd.get('headline')?.trim() || '',
+        location: fd.get('location')?.trim() || '',
+        phone: fd.get('phone')?.trim() || '',
+        email: fd.get('email')?.trim() || '',
+        linkedin: fd.get('linkedin')?.trim() || '',
+        summary: fd.get('summary')?.trim() || '',
+        experience: [],
+        education: [],
+        certifications: [],
+        skills: [],
+        languages: [],
+      };
+
+      document.querySelectorAll('#experience-list .item').forEach((el) => {
+        const get = (k) => el.querySelector(`[data-key="${k}"]`)?.value?.trim() || '';
+        const bullets = (el.querySelector('[data-key="bullets"]')?.value || '')
+          .split('\n').map((s) => s.trim()).filter(Boolean);
+        data.experience.push({
+          company: get('company'),
+          title: get('title'),
+          period: get('period'),
+          bullets,
+        });
+      });
+
+      document.querySelectorAll('#education-list .item').forEach((el) => {
+        const get = (k) => el.querySelector(`[data-key="${k}"]`)?.value?.trim() || '';
+        data.education.push({
+          school: get('school'),
+          degree: get('degree'),
+          period: get('period'),
+          gpa: get('gpa'),
+        });
+      });
+
+      document.querySelectorAll('#certifications-list .item').forEach((el) => {
+        const get = (k) => el.querySelector(`[data-key="${k}"]`)?.value?.trim() || '';
+        data.certifications.push({
+          name: get('name'),
+          issuer: get('issuer'),
+          date: get('date'),
+        });
+      });
+
+      // Skills: parse "name (level), name (level), ..."
+      const skillRaw = document.getElementById('skills-input').value || '';
+      data.skills = skillRaw.split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
+        const m = s.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+        return m ? { name: m[1].trim(), level: m[2].trim() } : s;
+      });
+
+      // Languages: same pattern.
+      const langRaw = document.getElementById('languages-input').value || '';
+      data.languages = langRaw.split(',').map((s) => s.trim()).filter(Boolean).map((s) => {
+        const m = s.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+        return m ? { name: m[1].trim(), level: m[2].trim() } : s;
+      });
+
+      return data;
+    }
+
+    /* --------------------------------- submit -------------------------------- */
+    document.getElementById('cv-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = collectData();
+      if (!data.name) { alert('Nama wajib diisi.'); return; }
+
+      try {
+        const resp = await fetch('/generate-cv', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          alert('Gagal: ' + (err.error || resp.statusText));
+          return;
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${data.name.replace(/\s+/g, '_')}_CV.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+
+    /* -------------------------------- sample data ---------------------------- */
+    async function loadSample() {
+      // Hardcoded copy of the server-side SAMPLE_CV so this works offline too.
+      const sample = {
+        name: 'Hanna Fransiska',
+        headline: 'Head of Investment Operations & Customer Service',
+        location: 'Tangerang, Banten',
+        phone: '0812 8094 4114',
+        email: 'hannafransiskaa@gmail.com',
+        summary: "Senior investment operations professional with 13+ years of proven success in Indonesia's asset management industry. Currently serving as Head of Investment Operations & Customer Service at Principal Asset Management, with deep expertise in end-to-end investment operations, fund accounting, regulatory reporting, mutual fund taxation, and customer service management.",
+        experience: [
+          { company: 'Principal Asset Management', title: 'Head of Investment Operations & Customer Service', period: 'August 2022 – Present', bullets: ['Lead and manage end-to-end investment operations and customer service.', 'Handle offshore investment products and customer complaint resolution.'] },
+          { company: 'PT Batavia Prosperindo Aset Manajemen', title: 'Operational Fund Accounting', period: '2013 – 2022', bullets: ['Managed NAV, reconciliation, fund setup, and operational reporting.', 'Coordinated with KSEI and Custodian Banks.'] },
+        ],
+        education: [{ school: 'Trisakti School of Management', degree: 'Bachelor of Business / Accounting', gpa: '2.9 / 4.0' }],
+        certifications: [{ name: 'Wakil Manajer Investasi (WMI) License', issuer: 'Otoritas Jasa Keuangan (OJK)' }],
+        skills: 'Investment Operations Management (Beginner), Fund Accounting & Reconciliation (Beginner), Mutual Fund Operations (Beginner), Customer Service Leadership (Beginner), Regulatory Reporting & Compliance (Beginner), Stakeholder & Client Management (Beginner)',
+        languages: 'English',
+      };
+
+      const form = document.getElementById('cv-form');
+      ['name','headline','location','phone','email','summary'].forEach((k) => {
+        if (form.elements[k]) form.elements[k].value = sample[k] || '';
+      });
+      document.getElementById('skills-input').value = sample.skills;
+      document.getElementById('languages-input').value = sample.languages;
+
+      document.getElementById('experience-list').innerHTML = '';
+      sample.experience.forEach(addExperience);
+
+      document.getElementById('education-list').innerHTML = '';
+      sample.education.forEach(addEducation);
+
+      document.getElementById('certifications-list').innerHTML = '';
+      sample.certifications.forEach(addCertification);
+    }
+
+    // Start with one empty row of each list.
+    addExperience();
+    addEducation();
+    addCertification();
+  </script>
+</body>
+</html>

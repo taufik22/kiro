@@ -20,6 +20,7 @@ const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
 const midtransClient = require('midtrans-client');
+const { generateCV, SAMPLE_CV } = require('./cv-generator');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -378,6 +379,52 @@ app.get('/api/status/:orderId', async (req, res) => {
 });
 
 // =========================================================================
+// CV ATS-friendly PDF Generator
+//   GET  /cv               -> halaman form input data CV
+//   GET  /generate-cv      -> download CV contoh (Hanna Fransiska) sebagai PDF
+//   POST /generate-cv      -> download PDF dari data CV custom (JSON body)
+// =========================================================================
+app.get('/cv', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cv.html'));
+});
+
+app.get('/generate-cv', (req, res) => {
+  try {
+    const filename = `${(SAMPLE_CV.name || 'CV').replace(/\s+/g, '_')}_CV.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`
+    );
+    generateCV(SAMPLE_CV, res);
+  } catch (err) {
+    console.error('❌ generate-cv (sample) error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/generate-cv', (req, res) => {
+  try {
+    const data = req.body && Object.keys(req.body).length ? req.body : SAMPLE_CV;
+
+    if (!data.name || typeof data.name !== 'string') {
+      return res.status(400).json({ error: 'Field "name" wajib diisi' });
+    }
+
+    const filename = `${data.name.replace(/\s+/g, '_')}_CV.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`
+    );
+    generateCV(data, res);
+  } catch (err) {
+    console.error('❌ generate-cv (custom) error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// =========================================================================
 // Start server
 // =========================================================================
 app.listen(PORT, () => {
@@ -385,5 +432,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running at ${BASE_URL}`);
   console.log(`   Midtrans mode: ${IS_PRODUCTION ? 'PRODUCTION' : 'SANDBOX'}`);
   console.log(`   GoPay Redirect: ${BASE_URL}/gopay`);
+  console.log(`   CV Generator:   ${BASE_URL}/cv`);
   console.log('=========================================');
 });
