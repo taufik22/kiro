@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "autopay": "node cli/autopay.js",
+    "autopay:list": "node cli/autopay.js list"
   },
   "keywords": [
     "midtrans",
@@ -20,5 +22,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "midtrans-client": "^1.4.2"
+  },
+  "optionalDependencies": {
+    "qrcode-terminal": "^0.12.0"
   }
 }

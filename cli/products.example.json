@@ -1,0 +1,28 @@
+{
+  "_comment": "TEMPLATE. Salin file ini jadi cli/products.json lalu isi token asli. cli/products.json di-gitignore supaya token tidak ikut ke repo. Token dikirim otomatis ke pembeli setelah QRIS lunas & langsung dihapus dari stok.",
+  "plans": {
+    "plus-1bulan": {
+      "name": "ChatGPT Plus - 1 Bulan",
+      "price": 50000,
+      "description": "Akses ChatGPT Plus (GPT-4o) selama 1 bulan"
+    },
+    "plus-3bulan": {
+      "name": "ChatGPT Plus - 3 Bulan",
+      "price": 135000,
+      "description": "Akses ChatGPT Plus (GPT-4o) selama 3 bulan"
+    },
+    "team-1bulan": {
+      "name": "ChatGPT Team - 1 Bulan",
+      "price": 90000,
+      "description": "Akses ChatGPT Team selama 1 bulan"
+    }
+  },
+  "tokens": {
+    "plus-1bulan": [
+      "ISI-TOKEN-ASLI-DI-SINI-1",
+      "ISI-TOKEN-ASLI-DI-SINI-2"
+    ],
+    "plus-3bulan": [],
+    "team-1bulan": []
+  }
+}
